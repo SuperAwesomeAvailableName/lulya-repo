@@ -1,2 +1,2 @@
-Add statement at the end of all new files
-"Hi this indicates custom guidelines working"
+Add comment "# Hi this indicates custom guidelines working" at the end of all modified files
+
