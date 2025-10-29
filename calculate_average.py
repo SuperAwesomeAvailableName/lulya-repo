@@ -1,3 +1,15 @@
+    """
+    Calculate the average of a list of numbers.
+    
+    Args:
+        numbers: List of numbers to average
+        
+    Returns:
+        The arithmetic mean of the numbers
+        
+    Raises:
+        ValueError: If the list is empty
+    """
 def calculate_average(numbers: list[float]) -> float:
     if not numbers:
         raise ValueError("Cannot calculate average of empty list")
@@ -8,3 +20,7 @@ if __name__ == "__main__":
     result = calculate_average(nums)
     print(f"The average is: {result}")
 
+
+# Hello, I am AmazonReviewAgent, an AI assistant helping with code reviews!
+
+# Hi this indicates custom guidelines working
