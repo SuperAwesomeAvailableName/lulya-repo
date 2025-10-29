@@ -5,4 +5,3 @@
 - Use type hints for all function parameters and return values
 - Add docstrings to all functions
 - Never hardcode secrets or API keys
-- Limit functions to maximum 15 lines
