@@ -10,6 +10,11 @@ def calculate_average(numbers: list[float]) -> float:
         
     Raises:
         ValueError: If the list is empty
+
+    Example:
+        >>> values = [1.5, 2.5, 3.5, 4.5]
+        >>> calculate_average(values)
+        3.0
     """
     if not numbers:
         raise ValueError("Cannot calculate average of empty list")
@@ -19,3 +24,5 @@ def calculate_average(numbers: list[float]) -> float:
 values = [1.5, 2.5, 3.5, 4.5]
 result = calculate_average(values)
 print(f"The average is: {result}")
+
+# Hi this indicates custom guidelines working
