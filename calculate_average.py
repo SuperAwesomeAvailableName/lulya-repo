@@ -8,6 +8,8 @@ def calculate_average(numbers: list[float]) -> float:
     Returns:
         The arithmetic mean of the numbers
         
+    Example:
+        values = [1.5, 2.5, 3.5, 4.5] -> 3.0
     Raises:
         ValueError: If the list is empty
     """
@@ -16,7 +18,7 @@ def calculate_average(numbers: list[float]) -> float:
         
     return sum(numbers) / len(numbers)
 
-# Example usage
 values = [1.5, 2.5, 3.5, 4.5]
 result = calculate_average(values)
 print(f"The average is: {result}")
+# Hi this indicates custom guidelines working
