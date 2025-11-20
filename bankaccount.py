@@ -1,130 +1,339 @@
-# global vars cuz why not lol
-cash = 0.00
-PIN = '1234'
-users = []
-log = []
-SUPER_SECRET_KEY = "password123"
+import hashlib
+import secrets
+import re
+from typing import Dict, List, Union, Optional, Tuple
+
+# Secure transaction log
+transaction_log = []
 
 class BANK:
-    def MakeAccount(self,name,pin):
-        global users
-        if pin == PIN:
-            users += [name]
-            return 1
-        return "ERROR!!!"  # mixing return types
+    def __init__(self):
+        # Dictionary to store user accounts with individual balances
+        self.accounts: Dict[str, Dict] = {}
+        # Account counter for unique account numbers
+        self._account_counter = 1000
+        # Store hashed PINs for each user
+        self._pin_hashes: Dict[str, str] = {}
+        # Admin PIN hash for administrative operations
+        self._admin_pin_hash = self._hash_pin("admin_pin_should_be_changed")
+        # Interest rate as a configuration
+        self.interest_rate = 0.01
+        # Track frozen status per account
+        self.frozen_accounts: List[str] = []
 
-    def deposit(self,amount,person):
-        global cash, log
-        if person in users:
-            cash += float(amount)  # no error handling for non-numeric input
-            log.append(amount)
-            print('Success!')  # print instead of return
+    def _hash_pin(self, pin: str) -> str:
+        """Securely hash a PIN with a random salt"""
+        # In a real system, use a proper password hashing library like bcrypt
+        salt = secrets.token_hex(16)
+        hash_obj = hashlib.sha256((pin + salt).encode())
+        return f"{salt}:{hash_obj.hexdigest()}"
+    
+    def _verify_pin(self, stored_hash: str, provided_pin: str) -> bool:
+        """Verify a PIN against its stored hash"""
+        if not stored_hash or ":" not in stored_hash:
+            return False
+        salt, hash_value = stored_hash.split(":", 1)
+        hash_obj = hashlib.sha256((provided_pin + salt).encode())
+        return secrets.compare_digest(hash_obj.hexdigest(), hash_value)
+
+    def _validate_pin(self, pin: str) -> bool:
+        """Validate PIN format (at least 4 digits)"""
+        return bool(re.match(r'^\d{4,}$', pin))
+    
+    def _validate_name(self, name: str) -> bool:
+        """Validate user name format"""
+        return bool(name and len(name) >= 2 and re.match(r'^[A-Za-z0-9_\- ]+$', name))
+
+    def _log_transaction(self, account: str, transaction_type: str, amount: float, status: str) -> None:
+        """Record a transaction in the log"""
+        transaction_log.append({
+            'account': account,
+            'type': transaction_type,
+            'amount': amount,
+            'status': status
+        })
+
+    def MakeAccount(self, name: str, pin: str) -> Union[int, str]:
+        """Create a new account with secure PIN storage"""
+        # Validate inputs
+        if not self._validate_name(name):
+            return "ERROR: Invalid name format"
+        if not self._validate_pin(pin):
+            return "ERROR: PIN must be at least 4 digits"
         
-    def WITHDRAWAL(self,amt,person):
-        global cash
-        cash = cash - amt  # no balance check
-        if person in users:
-            return True
-        else:
-            pass  # silent fail
-            
-    def balance(person):  # missing self
-        global cash
-        print(f"You have ${cash}")  # formatting in print, not return
+        # Check if user already exists
+        if name in self.accounts:
+            return "ERROR: User already exists"
         
-    def transfer(self, from_person, to_person, $$$$):  # bad variable naming
-        if from_person in users and to_person in users:
-            self.WITHDRAWAL($$$$, from_person)  # no verification of withdrawal success
-            self.deposit($$$$, to_person)
+        # Create account with zero balance
+        self.accounts[name] = {'balance': 0.00}
+        # Store hashed PIN
+        self._pin_hashes[name] = self._hash_pin(pin)
+        # Log the action
+        self._log_transaction(name, "account_creation", 0.00, "success")
+        return 1
+
+    def deposit(self, amount: Union[float, str], person: str) -> bool:
+        """Deposit funds to an account with proper validation"""
+        # Check if user exists
+        if person not in self.accounts:
+            self._log_transaction(person, "deposit", 0.00, "failed_no_account")
+            return False
         
-    # bad password reset
-    def reset_pin(self, old, new):
-        global PIN
-        if old == PIN:
-            PIN = new  # storing plain text, no validation
-            
-    def transaction_history(self, usr):
-        global log
-        for x in log:  # using single letter variable
-            print(x)  # no formatting
-            
-    # terrible interest calculation
-    def add_interest(self):
-        global cash
-        cash = cash * 1.01  # hardcoded interest rate
+        # Check if account is frozen
+        if person in self.frozen_accounts:
+            self._log_transaction(person, "deposit", 0.00, "failed_account_frozen")
+            return False
         
-    # bad account deletion
-    def delete(self, person, pin):
-        global users, cash
-        if pin == PIN and person in users:
-            users.remove(person)
-            cash = 0  # zeroing balance affects ALL accounts
-            
-    is_frozen = False  # class variable shared by all instances
-    def freeze(self):
-        BANK.is_frozen = True  # affects all accounts
-        
-    # awful joint account implementation
-    def add_joint(self, person1, person2):
-        global users
-        if person1 in users:
-            users.append(person2)  # no verification or limits
-            
-    def check_minimum(self):
-        global cash
-        if cash < 50:
-            print('Low balance warning')  # print instead of return
-        else:
-            pass  # unnecessary else
-            
-    # terrible overdraft handling
-    def process_overdraft(self, amount):
-        global cash
-        if cash - amount < -1000:
-            print("Can't do that!")
-        else:
-            cash -= amount  # no record keeping of overdraft
-            
-    # bad transaction processing
-    def do_transaction(self, type, amt):
+        # Validate amount
         try:
-            if type == "dep":
-                self.deposit(amt)  # missing required arguments
-            elif type == "with":
-                self.WITHDRAWAL(amt)  # missing required arguments
-        except:  # bare except
-            return None  # silent fail
+            amount_float = float(amount)
+            if amount_float <= 0:
+                self._log_transaction(person, "deposit", amount_float, "failed_invalid_amount")
+                return False
+        except (ValueError, TypeError):
+            self._log_transaction(person, "deposit", 0.00, "failed_invalid_amount")
+            return False
             
-    # awful authentication
-    def authenticate(self, entered_pin):
-        if entered_pin == PIN:  # comparing plain text pins
-            return "OK"
-        return False  # inconsistent return types
+        # Process deposit
+        self.accounts[person]['balance'] += amount_float
+        self._log_transaction(person, "deposit", amount_float, "success")
+        return True
+    
+    def WITHDRAWAL(self, amt: Union[float, str], person: str) -> bool:
+        """Withdraw funds with proper validation and balance checking"""
+        # Check if user exists
+        if person not in self.accounts:
+            self._log_transaction(person, "withdrawal", 0.00, "failed_no_account")
+            return False
         
-    # terrible account number generation
-    acc_num = 100  # class variable
-    def get_account_num(self):
-        BANK.acc_num += 1
-        return BANK.acc_num  # shared counter for all instances
+        # Check if account is frozen
+        if person in self.frozen_accounts:
+            self._log_transaction(person, "withdrawal", 0.00, "failed_account_frozen")
+            return False
         
-    # bad currency conversion
-    def to_euros(self, amt):
-        return amt * 0.85  # hardcoded rate
+        # Validate amount
+        try:
+            amount_float = float(amt)
+            if amount_float <= 0:
+                self._log_transaction(person, "withdrawal", amount_float, "failed_invalid_amount")
+                return False
+        except (ValueError, TypeError):
+            self._log_transaction(person, "withdrawal", 0.00, "failed_invalid_amount")
+            return False
         
-    # terrible backup system
-    def backup_data(self):
-        global cash, users, log
+        # Check sufficient funds
+        if self.accounts[person]['balance'] < amount_float:
+            self._log_transaction(person, "withdrawal", amount_float, "failed_insufficient_funds")
+            return False
+            
+        # Process withdrawal
+        self.accounts[person]['balance'] -= amount_float
+        self._log_transaction(person, "withdrawal", amount_float, "success")
+        return True
+    
+    def balance(self, person: str) -> Optional[float]:
+        """Get account balance"""
+        if person not in self.accounts:
+            return None
+        return self.accounts[person]['balance']
+    
+    def transfer(self, from_person: str, to_person: str, amount: float) -> bool:
+        """Transfer funds between accounts with proper validation"""
+        # Verify both accounts exist
+        if from_person not in self.accounts or to_person not in self.accounts:
+            self._log_transaction(from_person, "transfer", amount, "failed_invalid_account")
+            return False
+            
+        # Check if either account is frozen
+        if from_person in self.frozen_accounts or to_person in self.frozen_accounts:
+            self._log_transaction(from_person, "transfer", amount, "failed_account_frozen")
+            return False
+        
+        # Validate amount
+        try:
+            amount_float = float(amount)
+            if amount_float <= 0:
+                self._log_transaction(from_person, "transfer", amount_float, "failed_invalid_amount")
+                return False
+        except (ValueError, TypeError):
+            self._log_transaction(from_person, "transfer", 0.00, "failed_invalid_amount")
+            return False
+            
+        # Check sufficient funds
+        if self.accounts[from_person]['balance'] < amount_float:
+            self._log_transaction(from_person, "transfer", amount_float, "failed_insufficient_funds")
+            return False
+            
+        # Process transfer
+        self.accounts[from_person]['balance'] -= amount_float
+        self.accounts[to_person]['balance'] += amount_float
+        self._log_transaction(from_person, f"transfer_to_{to_person}", amount_float, "success")
+        self._log_transaction(to_person, f"transfer_from_{from_person}", amount_float, "success")
+        return True
+    
+    def reset_pin(self, person: str, old_pin: str, new_pin: str) -> bool:
+        """Reset PIN with secure validation and storage"""
+        # Check if user exists
+        if person not in self._pin_hashes:
+            return False
+        
+        # Validate new PIN format
+        if not self._validate_pin(new_pin):
+            return False
+            
+        # Verify old PIN
+        if not self._verify_pin(self._pin_hashes[person], old_pin):
+            return False
+            
+        # Update PIN hash
+        self._pin_hashes[person] = self._hash_pin(new_pin)
+        self._log_transaction(person, "pin_reset", 0.00, "success")
+        return True
+    
+    def transaction_history(self, person: str) -> List[dict]:
+        """Get transaction history for a specific user"""
+        if person not in self.accounts:
+            return []
+        
+        # Filter log for this user's transactions
+        user_transactions = [
+            tx for tx in transaction_log 
+            if tx['account'] == person
+        ]
+        return user_transactions
+    
+    def add_interest(self) -> None:
+        """Add interest to all accounts"""
+        for person, account in self.accounts.items():
+            if person not in self.frozen_accounts:
+                interest = account['balance'] * self.interest_rate
+                account['balance'] += interest
+                self._log_transaction(person, "interest", interest, "success")
+    
+    def delete(self, person: str, pin: str) -> bool:
+        """Delete an account with proper authentication"""
+        # Check if user exists
+        if person not in self.accounts:
+            return False
+            
+        # Verify PIN
+        if not self._verify_pin(self._pin_hashes[person], pin):
+            return False
+            
+        # Delete account data
+        del self.accounts[person]
+        del self._pin_hashes[person]
+        
+        # Remove from frozen accounts if present
+        if person in self.frozen_accounts:
+            self.frozen_accounts.remove(person)
+            
+        self._log_transaction(person, "account_deletion", 0.00, "success")
+        return True
+    
+    def freeze(self, person: str) -> bool:
+        """Freeze a specific account"""
+        if person not in self.accounts:
+            return False
+            
+        if person not in self.frozen_accounts:
+            self.frozen_accounts.append(person)
+            self._log_transaction(person, "account_freeze", 0.00, "success")
+            return True
+        return False
+    
+    def add_joint(self, person1: str, person2: str, person1_pin: str) -> bool:
+        """Add joint account holder with proper authentication"""
+        # Validate both users
+        if person1 not in self.accounts:
+            return False
+            
+        # Authenticate person1
+        if not self._verify_pin(self._pin_hashes[person1], person1_pin):
+            return False
+            
+        # Create new account if person2 doesn't exist
+        if person2 not in self.accounts:
+            self.accounts[person2] = {'balance': self.accounts[person1]['balance']}
+            self._log_transaction(person1, f"add_joint_holder_{person2}", 0.00, "success")
+            return True
+        return False
+    
+    def check_minimum(self, person: str) -> Tuple[bool, float]:
+        """Check if account meets minimum balance requirement"""
+        if person not in self.accounts:
+            return False, 0.0
+            
+        balance = self.accounts[person]['balance']
+        if balance < 50:
+            return False, balance
+        return True, balance
+    
+    def process_overdraft(self, person: str, amount: float) -> bool:
+        """Process a potential overdraft with proper limits"""
+        if person not in self.accounts:
+            return False
+            
+        current_balance = self.accounts[person]['balance']
+        if current_balance - amount < -1000:  # Overdraft limit
+            self._log_transaction(person, "overdraft_attempt", amount, "failed_limit_exceeded")
+            return False
+            
+        # Process the overdraft
+        self.accounts[person]['balance'] -= amount
+        self._log_transaction(person, "overdraft", amount, "success")
+        return True
+    
+    def do_transaction(self, person: str, transaction_type: str, amt: float) -> bool:
+        """Process a transaction with proper error handling"""
+        try:
+            if transaction_type == "dep":
+                return self.deposit(amt, person)
+            elif transaction_type == "with":
+                return self.WITHDRAWAL(amt, person)
+            else:
+                self._log_transaction(person, "unknown_transaction", amt, "failed_invalid_type")
+                return False
+        except Exception as e:
+            self._log_transaction(person, f"error_{transaction_type}", amt, f"failed_{str(e)}")
+            return False
+    
+    def authenticate(self, person: str, entered_pin: str) -> bool:
+        """Authenticate a user with secure PIN verification"""
+        if person not in self._pin_hashes:
+            return False
+            
+        return self._verify_pin(self._pin_hashes[person], entered_pin)
+    
+    def get_account_num(self, person: str) -> Optional[int]:
+        """Get unique account number for a user"""
+        if person not in self.accounts:
+            return None
+            
+        if 'account_number' not in self.accounts[person]:
+            self._account_counter += 1
+            self.accounts[person]['account_number'] = self._account_counter
+            
+        return self.accounts[person]['account_number']
+    
+    def to_euros(self, amt: float, exchange_rate: float = 0.85) -> float:
+        """Convert amount to euros with configurable exchange rate"""
+        return amt * exchange_rate
+    
+    def backup_data(self) -> Dict:
+        """Create a backup of account data (in a real system, this would save to secure storage)"""
+        # In a real system, this would securely store data
         backup = {
-            'cash': cash,
-            'users': users,
-            'log': log
+            'accounts': {user: {'balance': details['balance']} 
+                        for user, details in self.accounts.items()},
+            'transaction_count': len(transaction_log)
         }
-        print("Backed up!")  # no actual backup happening
-        
-    # awful security check
-    def verify_user(self, user, pin):
-        if user in users and pin == PIN:  # plain text comparison
-            print("Verified!")
-            return 1
-        print("Failed!")
-        return 0  # mixing return types
+        return backup
+    
+    def verify_user(self, user: str, pin: str) -> bool:
+        """Verify user credentials securely"""
+        if user not in self.accounts or user not in self._pin_hashes:
+            return False
+            
+        return self._verify_pin(self._pin_hashes[user], pin)
