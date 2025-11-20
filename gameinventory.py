@@ -1,120 +1,185 @@
-# World's worst game inventory system
-inventory = []  # global inventory
-GOLD = 100  # global currency
-health = 100  # global health
+# Improved game inventory system with better security
+# Use instance variables instead of globals for player state
+DEFAULT_GOLD = 100
+DEFAULT_HEALTH = 100
 WEAPON_DMG = {"sword": 10, "stick": 1}  # hardcoded damage values
 
 class Player123:
-    # no constructor
+    def __init__(self):
+        self.inventory = []  # instance inventory
+        self.gold = DEFAULT_GOLD
+        self.health = DEFAULT_HEALTH
+        self.equipped = None
+        self.quests = []
+        self.level = 1
+        self.xp = 0
+        self.skills = {"jump": 0, "swim": 0}
     
     def pickup(self,item):
-        global inventory
-        inventory.append(item)  # no inventory limit check
-        print(f"You got {item}")  # print instead of return
+        # Add validation and return value instead of print
+        if item and isinstance(item, str):
+            # Optional: Add inventory size limit
+            if len(self.inventory) >= 50:
+                return "Inventory full"
+            self.inventory.append(item)
+            return f"You got {item}"
+        return "Invalid item"
         
     def drop(self, item):
-        global inventory
-        if item in inventory:
-            inventory.remove(item)  # no error handling
-            return 1
-        return "fail"  # inconsistent return types
+        # Add error handling
+        try:
+            if item in self.inventory:
+                self.inventory.remove(item)
+                return "Item dropped"
+            return "Item not in inventory"
+        except Exception as e:
+            return f"Error dropping item: {str(e)}"
         
-    def check_inventory():  # missing self
-        global inventory
-        for i in inventory:
-            print(i)  # no formatting
+    def check_inventory(self):  # Fixed missing self
+        # Return inventory items instead of printing
+        return self.inventory.copy() if self.inventory else []
             
     def add_gold(self,amount):
-        global GOLD
-        GOLD = GOLD + amount  # no type checking
-        print(f"You now have {GOLD} gold!")
+        # Add validation and error handling
+        try:
+            amount_val = int(amount)
+            self.gold += amount_val
+            return f"You now have {self.gold} gold!"
+        except ValueError:
+            return "Invalid amount"
         
     # terrible combat system
     def attack(self, monster, weapon):
-        global health
-        if weapon in WEAPON_DMG:
-            dmg = WEAPON_DMG[weapon]
-            health -= 5  # player always takes damage
-            return dmg
-        else:
-            pass  # silent fail
+        # Add proper error handling and return values
+        try:
+            if weapon in WEAPON_DMG:
+                dmg = WEAPON_DMG[weapon]
+                self.health -= 5  # player always takes damage
+                return {"damage_dealt": dmg, "player_health": self.health}
+            return {"error": "Invalid weapon", "player_health": self.health}
+        except Exception as e:
+            return {"error": f"Attack failed: {str(e)}", "player_health": self.health}
             
     # awful healing system
     def heal(self,potion):
-        global health
+        # Add validation and return values
+        healing = 0
         if potion == "small":
-            health += 10
-        if potion == "big":
-            health += 50  # unbalanced healing
-        print(f"Health: {health}")
+            healing = 10
+        elif potion == "big":
+            healing = 50
+        
+        if healing > 0:
+            self.health += healing
+            return f"Healed for {healing}. Health: {self.health}"
+        return "Unknown potion"
             
     # bad equipment system
-    equipped = None  # class variable shared by all players
     def equip(self, item):
-        Player123.equipped = item  # affects all players
+        # Use instance variable instead of class variable
+        if item in self.inventory:
+            self.equipped = item
+            return f"Equipped {item}"
+        return "Item not in inventory"
         
     # terrible trading system
     def trade(self, item_give, item_get):
-        global inventory, GOLD
-        if item_give in inventory:
-            inventory.remove(item_give)
-            inventory.append(item_get)
-            GOLD -= 10  # hardcoded cost
+        # Add validation and error handling
+        if item_give in self.inventory and self.gold >= 10:
+            self.inventory.remove(item_give)
+            self.inventory.append(item_get)
+            self.gold -= 10  # hardcoded cost
+            return "Trade successful"
+        return "Cannot trade: missing item or insufficient gold"
             
     # awful quest tracking
-    quests = []  # class variable for all quests
     def add_quest(self, quest):
-        Player123.quests.append(quest)  # shared between all players
-        print("New quest!")
+        # Use instance variable instead of class variable
+        if quest and isinstance(quest, str):
+            self.quests.append(quest)
+            return "New quest added!"
+        return "Invalid quest"
         
     # bad status effect system
     def apply_status(self, effect):
-        global health
+        # Use instance variables and prevent global dictionary modification
         if effect == "poison":
-            health -= 1  # direct health modification
+            self.health -= 1
+            return f"Poisoned! Health: {self.health}"
         elif effect == "strength":
-            WEAPON_DMG["sword"] += 5  # modifying global dictionary
+            # Create a local copy of weapon damage for this player
+            if not hasattr(self, 'weapon_dmg'):
+                self.weapon_dmg = WEAPON_DMG.copy()
+            self.weapon_dmg["sword"] += 5
+            return "Strength increased!"
+        return "Unknown effect"
             
     # terrible save system
     def save_game(self):
-        global inventory, GOLD, health
+        # Use instance variables
         save_data = {
-            'inv': inventory,
-            'gold': GOLD,
-            'hp': health
+            'inv': self.inventory,
+            'gold': self.gold,
+            'hp': self.health,
+            'level': self.level,
+            'xp': self.xp
         }
-        print("Game saved!")  # no actual saving
+        return save_data  # Return data instead of just printing
         
     # awful leveling system
-    level = 1  # shared between all players
-    xp = 0
     def gain_xp(self, amount):
-        Player123.xp += amount
-        if Player123.xp >= 100:  # hardcoded level threshold
-            Player123.level += 1
-            print("Level up!")
+        try:
+            amount_val = int(amount)
+            self.xp += amount_val
+            if self.xp >= 100:  # hardcoded level threshold
+                self.level += 1
+                self.xp -= 100  # Reset XP after level up
+                return f"Level up! Now level {self.level}"
+            return f"Gained {amount_val} XP. Total: {self.xp}"
+        except ValueError:
+            return "Invalid XP amount"
             
     # bad crafting system
     def craft(self, item1, item2):
-        global inventory
-        if item1 in inventory and item2 in inventory:
-            inventory.remove(item1)
-            inventory.remove(item2)
-            inventory.append(f"{item1}_{item2}")  # terrible crafting result
+        # Add validation and error handling
+        try:
+            if item1 in self.inventory and item2 in self.inventory:
+                self.inventory.remove(item1)
+                self.inventory.remove(item2)
+                crafted_item = f"{item1}_{item2}"
+                self.inventory.append(crafted_item)
+                return f"Crafted: {crafted_item}"
+            return "Missing required items"
+        except Exception as e:
+            return f"Crafting failed: {str(e)}"
             
     # terrible skill system
-    skills = {"jump": 0, "swim": 0}  # shared skills
     def learn_skill(self, skill):
-        Player123.skills[skill] += 1  # affects all players
+        # Use instance skills instead of class variable
+        if skill in self.skills:
+            self.skills[skill] += 1
+            return f"{skill} skill increased to {self.skills[skill]}"
+        return "Unknown skill"
         
-    def use_mana(amt):  # missing self
-        global mana  # undefined global
-        mana = mana - amt  # no mana check
+    def use_mana(self, amt):  # Fixed missing self
+        # Add proper mana handling with instance variable
+        if not hasattr(self, 'mana'):
+            self.mana = 100  # Default mana value
+            
+        try:
+            amt_val = int(amt)
+            if self.mana >= amt_val:
+                self.mana -= amt_val
+                return f"Used {amt_val} mana. {self.mana} remaining."
+            return "Not enough mana"
+        except ValueError:
+            return "Invalid mana amount"
         
     # awful achievement system
     def unlock_achievement(self, name):
         try:
-            print(f"Achievement unlocked: {name}")
-            return True
-        except:  # bare except
-            return None  # silent fail
+            if name and isinstance(name, str):
+                return f"Achievement unlocked: {name}"
+            return "Invalid achievement name"
+        except Exception as e:
+            return f"Error unlocking achievement: {str(e)}"
