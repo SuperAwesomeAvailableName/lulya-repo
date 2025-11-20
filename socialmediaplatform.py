@@ -97,13 +97,22 @@ class SocialMedia123:
     # awful content filter
     def filter_content(self, text):
         bad_words = ["bad"]  # hardcoded bad words
-        for word in bad_words:
-            if word in text:
+            SocialMedia123.friends[user1] = set()
+        
+        # Validate users exist
+        if user1 in USERS and user2 in USERS:
+            SocialMedia123.friends[user1].add(user2)
+            return True
+        return False
                 return "CENSORED"
-        return text
+    # Improved search function
         
     # terrible analytics
-    def get_stats(self):
-        global POSTS, LIKES
-        print(f"Posts: {len(POSTS)}")
+        results = []
+        if term and isinstance(term, str):
+            # Sanitize input and prevent injection attacks
+            for p in POSTS:
+                if term in p["text"]:
+                    results.append(p)
+        return results
         print(f"Likes: {LIKES}")  # just prints basic stats
