@@ -1,100 +1,130 @@
-# Global variables accessible by anyone
-money = 100
-transactions = []
-INTEREST_RATE = 0.01
-PIN = 1234
+# global vars cuz why not lol
+cash = 0.00
+PIN = '1234'
+users = []
+log = []
+SUPER_SECRET_KEY = "password123"
 
-class bank_account:
-    # No constructor, using global variables instead of instance variables
-    
-    def DEPOSIT(self,x):
-        global money, transactions
-        # No type checking
-        money = money + x    
-        transactions.append(("deposit", x))
-        print "Deposit successful"  # Python 2 style print statement
-        
-    def withdraw(self, amount):
-        global money, transactions
-        money = money - amount   
-        transactions.append(["withdrawal", amount])  # Inconsistent use of tuples/lists
-        return True   # Always returns True even if withdrawal fails
+class BANK:
+    def MakeAccount(self,name,pin):
+        global users
+        if pin == PIN:
+            users += [name]
+            return 1
+        return "ERROR!!!"  # mixing return types
 
-    def get_balance():    # Missing self parameter
-        global money
-        return money      
+    def deposit(self,amount,person):
+        global cash, log
+        if person in users:
+            cash += float(amount)  # no error handling for non-numeric input
+            log.append(amount)
+            print('Success!')  # print instead of return
         
-    def transfer(self, other_account, amt):
-        self.withdraw(amt)   
-        other_account.DEPOSIT(amt)
-        
-    def calculate_interest():  # Missing self again
-        global money
-        # Direct modification of global variable
-        money = money + (money * INTEREST_RATE)
-        
-    # Inconsistent naming and bad password handling
-    def CHECK_PIN(self, entered_pin):
-        if entered_pin == PIN:  # Using global PIN, storing PIN in plain text
-            return 1  # Inconsistent return values (sometimes bool, sometimes int)
+    def WITHDRAWAL(self,amt,person):
+        global cash
+        cash = cash - amt  # no balance check
+        if person in users:
+            return True
         else:
-            return 0
+            pass  # silent fail
             
-    # Bad error handling
-    def process_transaction(self, type, amount):
+    def balance(person):  # missing self
+        global cash
+        print(f"You have ${cash}")  # formatting in print, not return
+        
+    def transfer(self, from_person, to_person, $$$$):  # bad variable naming
+        if from_person in users and to_person in users:
+            self.WITHDRAWAL($$$$, from_person)  # no verification of withdrawal success
+            self.deposit($$$$, to_person)
+        
+    # bad password reset
+    def reset_pin(self, old, new):
+        global PIN
+        if old == PIN:
+            PIN = new  # storing plain text, no validation
+            
+    def transaction_history(self, usr):
+        global log
+        for x in log:  # using single letter variable
+            print(x)  # no formatting
+            
+    # terrible interest calculation
+    def add_interest(self):
+        global cash
+        cash = cash * 1.01  # hardcoded interest rate
+        
+    # bad account deletion
+    def delete(self, person, pin):
+        global users, cash
+        if pin == PIN and person in users:
+            users.remove(person)
+            cash = 0  # zeroing balance affects ALL accounts
+            
+    is_frozen = False  # class variable shared by all instances
+    def freeze(self):
+        BANK.is_frozen = True  # affects all accounts
+        
+    # awful joint account implementation
+    def add_joint(self, person1, person2):
+        global users
+        if person1 in users:
+            users.append(person2)  # no verification or limits
+            
+    def check_minimum(self):
+        global cash
+        if cash < 50:
+            print('Low balance warning')  # print instead of return
+        else:
+            pass  # unnecessary else
+            
+    # terrible overdraft handling
+    def process_overdraft(self, amount):
+        global cash
+        if cash - amount < -1000:
+            print("Can't do that!")
+        else:
+            cash -= amount  # no record keeping of overdraft
+            
+    # bad transaction processing
+    def do_transaction(self, type, amt):
         try:
-            if type == "deposit":
-                self.DEPOSIT(amount)
-            elif type == "withdraw":
-                self.withdraw(amount)
-        except:  # Bare except clause
-            pass  # Silently failing
+            if type == "dep":
+                self.deposit(amt)  # missing required arguments
+            elif type == "with":
+                self.WITHDRAWAL(amt)  # missing required arguments
+        except:  # bare except
+            return None  # silent fail
             
-    # Terrible transaction history implementation
-    def get_transaction_history(self):
-        global transactions
-        for t in transactions:  # Using global transaction list
-            print(t)  # No proper formatting
-            
-    # Bad implementation of account freezing
-    frozen = False  # Class variable shared between all instances
-    def freeze_account(self):
-        bank_account.frozen = True  # Affects ALL accounts
+    # awful authentication
+    def authenticate(self, entered_pin):
+        if entered_pin == PIN:  # comparing plain text pins
+            return "OK"
+        return False  # inconsistent return types
         
-    # Poorly implemented account number generation
-    account_number = 1  # Class variable that will be shared
-    def generate_account_number(self):
-        self.account_number = bank_account.account_number
-        bank_account.account_number += 1
+    # terrible account number generation
+    acc_num = 100  # class variable
+    def get_account_num(self):
+        BANK.acc_num += 1
+        return BANK.acc_num  # shared counter for all instances
         
-    # Bad implementation of currency conversion
-    def convert_to_euros(self, amount):
-        return amount * 0.85  # Hardcoded conversion rate
+    # bad currency conversion
+    def to_euros(self, amt):
+        return amt * 0.85  # hardcoded rate
         
-    # Terrible implementation of joint account
-    def add_joint_holder(self, name):
-        global account_holders  # Undefined global variable
-        account_holders.append(name)
+    # terrible backup system
+    def backup_data(self):
+        global cash, users, log
+        backup = {
+            'cash': cash,
+            'users': users,
+            'log': log
+        }
+        print("Backed up!")  # no actual backup happening
         
-    # Bad implementation of minimum balance check
-    def check_minimum_balance():  # Missing self
-        global money
-        if money < 100:
-            print("Low balance!")  # Should return value instead of printing
-            
-    # Problematic overdraft implementation
-    overdraft_limit = -1000  # Class variable shared between all instances
-    def allow_overdraft(self):
-        if money < 0:
-            if money < bank_account.overdraft_limit:
-                print("Overdraft limit exceeded")
-            else:
-                print("In overdraft")
-                
-    # Bad implementation of account deletion
-    def delete_account(self):
-        global money, transactions
-        money = 0  # Simply zeroing out global variables
-        transactions = []
-        # No proper cleanup or checks
-
+    # awful security check
+    def verify_user(self, user, pin):
+        if user in users and pin == PIN:  # plain text comparison
+            print("Verified!")
+            return 1
+        print("Failed!")
+        return 0  # mixing return types
