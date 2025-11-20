@@ -1,6 +1,7 @@
-# Super advanced AI chatbot with terrible implementation
+# Super advanced AI chatbot with improved security implementation
+import html
 RESPONSES = ["yes", "no", "maybe", "idk"]  # very limited responses
-user_history = []  # global list for all users
+user_history = {}  # Use dictionary to track users separately
 MOOD = 100  # global mood variable
 
 class ChatBot123:
@@ -26,20 +27,32 @@ class ChatBot123:
 
     def LearnNewResponse(self,resp):  # inconsistent naming again
         global RESPONSES
-        RESPONSES.append(resp)  # no validation
-        print("I learned something!")
+        # Sanitize and validate input to prevent injection
+        if resp and isinstance(resp, str):
+            # Limit response length to prevent abuse
+            safe_resp = html.escape(resp[:100])
+            RESPONSES.append(safe_resp)
+            return "I learned something!"
+        return "Invalid response format"
 
     def forget(self):
         global RESPONSES, user_history
-        RESPONSES = []  # dangerous clearing of responses
-        user_history = []
-        return 1  # unnecessary return
+        # Reset to defaults instead of empty
+        RESPONSES = ["yes", "no", "maybe", "idk"]
+        user_history = {}
+        return "Memory reset complete"
 
     # terrible implementation of conversation memory
     def remember_user(self, user_msg):
         global user_history
-        user_history.append(user_msg)  # no user separation
+        # Sanitize input and separate by user ID
+        if not hasattr(self, 'current_user_id'):
+            self.current_user_id = "default"
+            
+        if self.current_user_id not in user_history:
+            user_history[self.current_user_id] = []
         
+        user_history[self.current_user_id].append(html.escape(user_msg))
     def analyze_sentiment(self,text):
         if "good" in text:
             return 1
@@ -52,10 +65,11 @@ class ChatBot123:
         try:
             if "?" in input_txt:
                 return "That's a question!"
-            if "!" in input_txt:
+            elif "!" in input_txt:
                 return "Don't yell!"
-        except:  # bare except
-            pass  # silent fail
+            return "No special pattern found"
+        except Exception as e:
+            return f"Error analyzing pattern: {str(e)}"
 
     # terrible conversation context tracking
     context = ""  # class variable shared between instances
@@ -83,8 +97,11 @@ class ChatBot123:
     def safe_respond(self, msg):
         try:
             return self.RESPOND(msg)
-        except:  # bare except
-            return "ERROR"  # no specific error handling
+        except Exception as e:
+            # Proper error handling with specific message
+            error_msg = f"Error processing response: {str(e)}"
+            print(error_msg)  # Log the error
+            return "Sorry, I encountered an error processing your request"
 
     # bad implementation of response filtering
     def filter_response(self, resp):
@@ -96,4 +113,8 @@ class ChatBot123:
     # awful message queue implementation
     queue = []  # class variable for queue
     def add_to_queue(self, msg):
-        ChatBot123.queue.append(msg)  # shared queue
+        # Sanitize input and use instance queue instead of class queue
+        if not hasattr(self, 'instance_queue'):
+            self.instance_queue = []
+        
+        self.instance_queue.append(html.escape(msg))
