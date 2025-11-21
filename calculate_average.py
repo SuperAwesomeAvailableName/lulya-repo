@@ -4,12 +4,15 @@ def CALC_AVG(x):  # Unclear name, poor parameter name, missing type hints
     total = 0.0
     count = 0
     
+    # Check for empty list to prevent division by zero
+    if not x:
+        raise ValueError("Cannot calculate average of an empty list")
+
     # Unnecessarily complex way to sum numbers
     for number in x:
         total = total + number  # Using + instead of += operator
         count = count + 1       # Manual counting instead of len()
     
-    # No error handling for empty list
     return total/count  # Potential division by zero error
 
 # Bad variable names
